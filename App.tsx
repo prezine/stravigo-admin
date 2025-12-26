@@ -18,7 +18,8 @@ import {
   Lock,
   ArrowRight,
   ShieldCheck,
-  LogOut
+  LogOut,
+  Type
 } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
@@ -28,6 +29,7 @@ import Leads from './pages/Leads';
 import Testimonials from './pages/Testimonials';
 import Services from './pages/Services';
 import Careers from './pages/Careers';
+import HeroManager from './pages/HeroManager';
 
 const SidebarLink = ({ to, icon: Icon, label, active }: { to: string, icon: any, label: string, active: boolean }) => (
   <Link
@@ -122,8 +124,9 @@ const AppContent = ({ onLogout }: { onLogout: () => void }) => {
             <p className="text-[10px] text-[#555] tracking-widest uppercase mt-1">Admin Portal</p>
           </div>
 
-          <nav className="flex-1 px-4 space-y-2 overflow-y-auto mt-4">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto mt-4">
             <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" active={location.pathname === '/'} />
+            <SidebarLink to="/hero-sections" icon={Type} label="Hero Editor" active={location.pathname === '/hero-sections'} />
             <SidebarLink to="/case-studies" icon={Briefcase} label="Our Work" active={location.pathname === '/case-studies'} />
             <SidebarLink to="/insights" icon={FileText} label="Insights" active={location.pathname === '/insights'} />
             <SidebarLink to="/leads" icon={Users} label="Leads" active={location.pathname === '/leads'} />
@@ -184,6 +187,7 @@ const AppContent = ({ onLogout }: { onLogout: () => void }) => {
         <div className="p-6 max-w-7xl mx-auto min-h-[calc(100vh-64px)] animate-in fade-in duration-700">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/hero-sections" element={<HeroManager />} />
             <Route path="/case-studies" element={<CaseStudies />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/leads" element={<Leads />} />

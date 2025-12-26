@@ -11,6 +11,8 @@ export interface Page {
   hero_cta_link?: string;
   content: any;
   is_published: boolean;
+  // Added updated_at to track synchronization and modification history
+  updated_at?: string;
 }
 
 export interface CaseStudy {
@@ -30,6 +32,8 @@ export interface CaseStudy {
   is_featured: boolean;
   is_published: boolean;
   created_at: string;
+  // Added updated_at for consistency with database updates
+  updated_at?: string;
 }
 
 export interface Insight {
@@ -44,6 +48,8 @@ export interface Insight {
   content_format: 'article' | 'video';
   is_published: boolean;
   created_at: string;
+  // Track article updates
+  updated_at?: string;
 }
 
 export interface Lead {
@@ -58,6 +64,8 @@ export interface Lead {
   message?: string;
   status: 'new' | 'contacted' | 'converted' | 'archived';
   created_at: string;
+  // Track lead status modification time
+  updated_at?: string;
 }
 
 export interface Testimonial {
@@ -71,6 +79,8 @@ export interface Testimonial {
   is_featured: boolean;
   is_approved: boolean;
   created_at: string;
+  // Track approval status changes
+  updated_at?: string;
 }
 
 export interface JobOpening {
@@ -82,6 +92,9 @@ export interface JobOpening {
   location: string;
   description: string;
   is_active: boolean;
+  // Standard timestamps for career listings
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BrandClient {
@@ -91,4 +104,7 @@ export interface BrandClient {
   logo_url?: string;
   service_type?: string;
   is_active: boolean;
+  // Standard timestamps for brand assets
+  created_at?: string;
+  updated_at?: string;
 }
