@@ -1,0 +1,7 @@
+{
+  "name": "Stravigo Admin Dashboard",
+  "description": "A premium, strategy-driven CMS for managing Stravigo's website content, including case studies, insights, leads, and services.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
