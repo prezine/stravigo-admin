@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Briefcase, 
@@ -14,7 +14,11 @@ import {
   Search,
   ChevronRight,
   Menu,
-  X
+  X,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  LogOut
 } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard';
@@ -39,12 +43,73 @@ const SidebarLink = ({ to, icon: Icon, label, active }: { to: string, icon: any,
   </Link>
 );
 
-const AppContent = () => {
+const Login = ({ onLogin }: { onLogin: (pass: string) => void }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === 'stravigo123@') {
+      onLogin(password);
+    } else {
+      setError(true);
+      setTimeout(() => setError(false), 2000);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 selection:bg-white selection:text-black">
+      <div className="w-full max-w-md space-y-12 animate-in fade-in zoom-in duration-700">
+        <div className="text-center space-y-4">
+          <h1 className="text-6xl font-bold tracking-tighter font-display uppercase italic text-white">Stravigo</h1>
+          <div className="flex items-center justify-center gap-2 text-[#555] uppercase tracking-[0.3em] text-[10px] font-black">
+            <Lock size={12} />
+            <span>Secure Admin Access</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative group">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter Portal Key"
+              className={`w-full bg-[#0a0a0a] border ${error ? 'border-red-500' : 'border-[#1a1a1a]'} rounded-2xl px-6 py-5 text-center text-lg tracking-[0.5em] focus:border-white outline-none transition-all duration-500 group-hover:border-[#333]`}
+              autoFocus
+            />
+            {error && (
+              <p className="absolute -bottom-8 left-0 right-0 text-center text-red-500 text-[10px] uppercase font-black tracking-widest animate-bounce">
+                Access Denied. Incorrect Key.
+              </p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 hover:bg-[#e5e5e5] transition-all transform active:scale-[0.98]"
+          >
+            Unlock Portal <ArrowRight size={16} />
+          </button>
+        </form>
+
+        <div className="pt-12 text-center">
+          <p className="text-[#222] text-[9px] uppercase font-black tracking-widest leading-loose">
+            Internal Stravigo Project © 2025<br />
+            Protected by Strategy & Intelligence
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AppContent = ({ onLogout }: { onLogout: () => void }) => {
   const location = useLocation();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex min-h-screen bg-[#050505] text-white overflow-hidden">
+    <div className="flex min-h-screen bg-[#050505] text-white overflow-hidden selection:bg-white selection:text-black">
       {/* Sidebar */}
       <aside 
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0a0a] border-r border-[#1a1a1a] transition-transform duration-300 lg:relative lg:translate-x-0 ${
@@ -67,14 +132,22 @@ const AppContent = () => {
             <SidebarLink to="/careers" icon={UserPlus} label="Careers" active={location.pathname === '/careers'} />
           </nav>
 
-          <div className="p-4 border-t border-[#1a1a1a]">
+          <div className="p-4 border-t border-[#1a1a1a] space-y-4">
             <div className="flex items-center gap-3 px-2 py-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#333] to-[#666]"></div>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#333] to-[#666] flex items-center justify-center">
+                <ShieldCheck size={14} className="text-white/50" />
+              </div>
               <div>
                 <p className="text-xs font-semibold">Admin User</p>
                 <p className="text-[10px] text-[#666]">Stravigo Team</p>
               </div>
             </div>
+            <button 
+              onClick={onLogout}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-[#1a1a1a] text-[#444] hover:text-white hover:bg-white/5 transition-all text-[10px] font-black uppercase tracking-widest"
+            >
+              <LogOut size={14} /> Exit Portal
+            </button>
           </div>
         </div>
       </aside>
@@ -108,7 +181,7 @@ const AppContent = () => {
           </div>
         </header>
 
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="p-6 max-w-7xl mx-auto min-h-[calc(100vh-64px)] animate-in fade-in duration-700">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/case-studies" element={<CaseStudies />} />
@@ -117,6 +190,7 @@ const AppContent = () => {
             <Route path="/testimonials" element={<Testimonials />} />
             <Route path="/services" element={<Services />} />
             <Route path="/careers" element={<Careers />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </main>
@@ -125,9 +199,29 @@ const AppContent = () => {
 };
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem('stravigo_auth') === 'true';
+  });
+
+  const handleLogin = (pass: string) => {
+    if (pass === 'stravigo123@') {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('stravigo_auth', 'true');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('stravigo_auth');
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <HashRouter>
-      <AppContent />
+      <AppContent onLogout={handleLogout} />
     </HashRouter>
   );
 }
