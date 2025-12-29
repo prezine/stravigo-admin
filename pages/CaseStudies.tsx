@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, uploadImage } from '../supabase';
 import { CaseStudy } from '../types';
 import { 
@@ -26,6 +26,8 @@ const CaseStudies: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'complete' | 'in progress'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,6 +46,16 @@ const CaseStudies: React.FC = () => {
     }
     setLoading(false);
   };
+
+  // Derived filtered data
+  const filteredCaseStudies = useMemo(() => {
+    return caseStudies.filter(cs => {
+      const matchesStatus = filterStatus === 'all' || cs.status?.toLowerCase() === filterStatus;
+      const matchesSearch = cs.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           cs.slug.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+  }, [caseStudies, filterStatus, searchQuery]);
 
   const handleEdit = (cs: CaseStudy) => {
     setEditingCase({
@@ -179,13 +191,39 @@ const CaseStudies: React.FC = () => {
       <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden">
         <div className="p-4 border-b border-[#1a1a1a] flex flex-wrap gap-4 items-center justify-between">
           <div className="flex gap-2">
-            <button className="px-4 py-1.5 text-xs font-bold rounded-full bg-white text-black">All</button>
-            <button className="px-4 py-1.5 text-xs font-bold rounded-full text-[#555] hover:text-white transition-colors">Complete</button>
-            <button className="px-4 py-1.5 text-xs font-bold rounded-full text-[#555] hover:text-white transition-colors">In Progress</button>
+            <button 
+              onClick={() => setFilterStatus('all')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${filterStatus === 'all' ? 'bg-white text-black' : 'text-[#555] hover:text-white'}`}
+            >
+              All
+            </button>
+            <button 
+              onClick={() => setFilterStatus('complete')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${filterStatus === 'complete' ? 'bg-white text-black' : 'text-[#555] hover:text-white'}`}
+            >
+              Complete
+            </button>
+            <button 
+              onClick={() => setFilterStatus('in progress')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${filterStatus === 'in progress' ? 'bg-white text-black' : 'text-[#555] hover:text-white'}`}
+            >
+              In Progress
+            </button>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#111] border border-[#222] rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#111] border border-[#222] rounded-lg focus-within:border-white/20 transition-all">
             <Search size={14} className="text-[#555]" />
-            <input type="text" placeholder="Search projects..." className="bg-transparent border-none focus:ring-0 text-xs w-48 text-white" />
+            <input 
+              type="text" 
+              placeholder="Search projects..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-none focus:ring-0 text-xs w-48 text-white placeholder-[#333]" 
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="text-[#333] hover:text-white transition-colors">
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -204,9 +242,9 @@ const CaseStudies: React.FC = () => {
             <tbody className="divide-y divide-[#1a1a1a]">
               {loading ? (
                 <tr><td colSpan={6} className="px-6 py-12 text-center text-[#555]"><Loader2 className="animate-spin mx-auto mb-2" /> Synchronizing Portfolio...</td></tr>
-              ) : caseStudies.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-12 text-center text-[#555]">No campaigns found in the archive.</td></tr>
-              ) : caseStudies.map((cs) => (
+              ) : filteredCaseStudies.length === 0 ? (
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-[#222] font-black uppercase tracking-widest text-[10px]">No campaigns found matching your criteria.</td></tr>
+              ) : filteredCaseStudies.map((cs) => (
                 <tr key={cs.id} className="hover:bg-[#0d0d0d] transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
