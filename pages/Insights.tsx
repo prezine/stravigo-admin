@@ -14,7 +14,10 @@ import {
   XCircle,
   Calendar,
   Loader2,
-  Upload
+  Upload,
+  Search as SearchIcon,
+  Globe,
+  Clock
 } from 'lucide-react';
 
 const Insights: React.FC = () => {
@@ -56,7 +59,9 @@ const Insights: React.FC = () => {
       author_name: 'Stravigo Editorial',
       content_format: 'article',
       is_published: false,
-      content_body: ''
+      content_body: '',
+      seo_meta_title: '',
+      seo_meta_description: ''
     });
     setIsEditorOpen(true);
   };
@@ -77,13 +82,21 @@ const Insights: React.FC = () => {
     if (!file || !editingInsight) return;
 
     setUploading(true);
-    const url = await uploadImage(file);
+    const { url, error } = await uploadImage(file);
     if (url) {
       setEditingInsight({ ...editingInsight, featured_image_url: url });
     } else {
-      alert('Failed to upload image. Ensure "stravigo-storage" bucket exists and is public.');
+      alert(error || 'Failed to upload image. Please check file size and type.');
     }
     setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const stripMarkdown = (md: string) => {
+    return md
+      .replace(/[#*`>]/g, '') // Remove simple markdown symbols
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Keep link text
+      .trim();
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -91,17 +104,40 @@ const Insights: React.FC = () => {
     if (!editingInsight) return;
     setSaving(true);
 
+    // Auto-fill SEO metadata if missing
+    const seoTitle = editingInsight.seo_meta_title?.trim() || editingInsight.title?.trim() || '';
+    const plainBody = stripMarkdown(editingInsight.content_body || '');
+    const seoDesc = editingInsight.seo_meta_description?.trim() || 
+                    editingInsight.excerpt?.trim() || 
+                    plainBody.substring(0, 155).trim() + (plainBody.length > 155 ? '...' : '');
+
+    // Handle published_at timestamp
+    let publishedAt = editingInsight.published_at;
+    if (editingInsight.is_published && !publishedAt) {
+      publishedAt = new Date().toISOString();
+    } else if (!editingInsight.is_published) {
+      publishedAt = undefined; // Or keep as is depending on policy, usually clear if unpublishing
+    }
+
+    const payload = {
+      ...editingInsight,
+      seo_meta_title: seoTitle,
+      seo_meta_description: seoDesc,
+      published_at: publishedAt,
+      updated_at: new Date().toISOString()
+    };
+
     let error;
     if (editingInsight.id) {
       const { error: err } = await supabase
         .from('insights')
-        .update(editingInsight)
+        .update(payload)
         .eq('id', editingInsight.id);
       error = err;
     } else {
       const { error: err } = await supabase
         .from('insights')
-        .insert([editingInsight]);
+        .insert([payload]);
       error = err;
     }
 
@@ -118,28 +154,28 @@ const Insights: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold font-display tracking-tight">The Stravigo Eagle</h2>
-          <p className="text-[#888] mt-1">Manage articles, trends, and strategic insights.</p>
+          <h2 className="text-3xl font-bold font-display tracking-tight italic">The Stravigo Eagle</h2>
+          <p className="text-[#888] mt-1">Deploying strategic intelligence and industry-shaping articles.</p>
         </div>
         <button 
           onClick={handleNew}
-          className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-bold hover:bg-[#eee] transition-all"
+          className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-bold hover:bg-[#eee] transition-all shadow-xl"
         >
           <Plus size={18} />
-          New Article
+          Draft New Intelligence
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-full py-20 text-center text-[#555] flex flex-col items-center gap-2">
-            <Loader2 className="animate-spin" />
-            <span>Loading articles...</span>
+            <Loader2 className="animate-spin" size={32} />
+            <span className="text-[10px] uppercase font-black tracking-widest">Scanning Editorial Archive</span>
           </div>
         ) : insights.length === 0 ? (
           <div className="col-span-full py-20 text-center text-[#555] bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl">No insights published.</div>
         ) : insights.map((insight) => (
-          <div key={insight.id} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden group hover:border-white/20 transition-all flex flex-col">
+          <div key={insight.id} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden group hover:border-white/20 transition-all flex flex-col shadow-lg">
             <div className="h-48 bg-[#111] relative overflow-hidden">
               {insight.featured_image_url ? (
                 <img src={insight.featured_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -149,42 +185,47 @@ const Insights: React.FC = () => {
                 </div>
               )}
               <div className="absolute top-4 left-4">
-                <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-[10px] uppercase tracking-widest font-bold rounded-full">
+                <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-[9px] uppercase tracking-widest font-black rounded-full border border-white/10">
                   {insight.category}
                 </span>
               </div>
               {!insight.is_published && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <span className="px-4 py-1.5 bg-yellow-500 text-black text-[10px] font-bold uppercase rounded-lg">Draft</span>
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+                  <span className="px-4 py-1.5 bg-yellow-500/90 text-black text-[9px] font-black uppercase tracking-widest rounded-lg">Draft Phase</span>
                 </div>
               )}
             </div>
             
-            <div className="p-5 space-y-3 flex-1">
-              <div className="flex items-center gap-2 text-[10px] text-[#555] font-medium uppercase tracking-widest">
-                <Calendar size={12} />
-                {new Date(insight.created_at).toLocaleDateString()}
-                <span>•</span>
-                {insight.content_format}
+            <div className="p-6 space-y-4 flex-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] text-[#555] font-black uppercase tracking-widest">
+                  <Calendar size={12} className="text-[#333]" />
+                  {new Date(insight.created_at).toLocaleDateString()}
+                </div>
+                {insight.published_at && (
+                  <div className="flex items-center gap-1.5 text-[9px] text-green-500 font-black uppercase tracking-tighter">
+                    <Globe size={10} /> Live
+                  </div>
+                )}
               </div>
-              <h3 className="font-bold text-lg leading-tight line-clamp-2 hover:text-white transition-colors cursor-pointer">
+              <h3 className="font-bold text-lg leading-tight line-clamp-2 hover:text-white transition-colors cursor-pointer font-display">
                 {insight.title}
               </h3>
-              <p className="text-xs text-[#888] line-clamp-2 leading-relaxed">
-                {insight.excerpt || 'No summary provided for this article.'}
+              <p className="text-xs text-[#666] line-clamp-3 leading-relaxed">
+                {insight.excerpt || stripMarkdown(insight.content_body).substring(0, 100) + '...'}
               </p>
             </div>
 
-            <div className="px-5 py-4 bg-[#0d0d0d] border-t border-[#1a1a1a] flex justify-between items-center">
+            <div className="px-6 py-4 bg-[#0d0d0d] border-t border-[#1a1a1a] flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#333]"></div>
-                <span className="text-[10px] font-medium text-[#555]">{insight.author_name}</span>
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#222] to-[#444] border border-white/5"></div>
+                <span className="text-[10px] font-bold text-[#555] tracking-tight">{insight.author_name}</span>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => handleEdit(insight)} className="p-2 hover:bg-[#1a1a1a] rounded-lg transition-colors text-[#888] hover:text-white">
+                <button onClick={() => handleEdit(insight)} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-[#555] hover:text-white">
                   <Edit2 size={14} />
                 </button>
-                <button className="p-2 hover:bg-[#1a1a1a] rounded-lg transition-colors text-[#888] hover:text-white">
+                <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-[#555] hover:text-white">
                   <Eye size={14} />
                 </button>
                 <button 
@@ -201,66 +242,71 @@ const Insights: React.FC = () => {
 
       {/* Insight Editor Modal */}
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="bg-[#0a0a0a] border border-[#1a1a1a] w-full max-w-4xl h-[90vh] rounded-2xl flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-[#1a1a1a] flex justify-between items-center shrink-0">
-              <h3 className="text-2xl font-bold font-display">Article Composer</h3>
-              <button onClick={() => setIsEditorOpen(false)}><XCircle size={28} className="text-[#333] hover:text-white" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-lg">
+          <div className="bg-[#0a0a0a] border border-[#1a1a1a] w-full max-w-5xl h-[95vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-[#1a1a1a] flex justify-between items-center shrink-0 bg-[#0d0d0d]">
+              <div>
+                <h3 className="text-2xl font-bold font-display italic tracking-tight">{editingInsight?.id ? 'Refine Intelligence' : 'Draft New Article'}</h3>
+                <p className="text-[10px] text-[#555] uppercase tracking-[0.2em] font-black mt-1">Stravigo Editorial Engine</p>
+              </div>
+              <button onClick={() => setIsEditorOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+                <XCircle size={32} className="text-[#333] hover:text-white" />
+              </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-8 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
+            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Title</label>
+                    <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Headline</label>
                     <input 
                       type="text" 
                       value={editingInsight?.title} 
                       onChange={e => setEditingInsight({...editingInsight!, title: e.target.value})}
-                      className="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 focus:ring-1 focus:ring-white outline-none font-medium text-lg"
-                      placeholder="Insight Headline"
+                      className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-4 focus:border-white outline-none font-bold text-xl transition-all"
+                      placeholder="Article Title..."
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Slug</label>
+                    <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">URL Segment (Slug)</label>
                     <input 
                       type="text" 
                       value={editingInsight?.slug} 
                       onChange={e => setEditingInsight({...editingInsight!, slug: e.target.value})}
-                      className="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-2 focus:ring-1 focus:ring-white outline-none font-mono text-sm"
+                      className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 focus:border-white outline-none font-mono text-xs text-[#888]"
                       placeholder="url-friendly-slug"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Format</label>
+                <div className="space-y-6">
+                   <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Content Modality</label>
                     <div className="grid grid-cols-2 gap-2">
                       <button 
                         type="button" 
                         onClick={() => setEditingInsight({...editingInsight!, content_format: 'article'})}
-                        className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border transition-all ${editingInsight?.content_format === 'article' ? 'bg-white text-black border-white' : 'bg-[#111] text-[#555] border-[#222]'}`}
+                        className={`flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest ${editingInsight?.content_format === 'article' ? 'bg-white text-black border-white' : 'bg-[#111] text-[#555] border-[#222] hover:border-[#333]'}`}
                       >
                         <FileText size={16} /> Article
                       </button>
                       <button 
                         type="button" 
                         onClick={() => setEditingInsight({...editingInsight!, content_format: 'video'})}
-                        className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border transition-all ${editingInsight?.content_format === 'video' ? 'bg-white text-black border-white' : 'bg-[#111] text-[#555] border-[#222]'}`}
+                        className={`flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest ${editingInsight?.content_format === 'video' ? 'bg-white text-black border-white' : 'bg-[#111] text-[#555] border-[#222] hover:border-[#333]'}`}
                       >
                         <Video size={16} /> Video
                       </button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Category</label>
+                    <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Insight Vertical</label>
                     <select 
                       value={editingInsight?.category} 
                       onChange={e => setEditingInsight({...editingInsight!, category: e.target.value})}
-                      className="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-2.5 focus:ring-1 focus:ring-white outline-none text-sm"
+                      className="w-full bg-[#111] border border-[#222] rounded-xl px-4 py-3 focus:border-white outline-none text-sm font-bold appearance-none cursor-pointer"
                     >
                       <option>Strategic Thinking</option>
                       <option>Market Trends</option>
@@ -273,13 +319,13 @@ const Insights: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Featured Visual (Image)</label>
-                <div className="flex gap-4">
-                  <div className="w-24 h-24 rounded-xl bg-[#111] border border-[#222] flex items-center justify-center overflow-hidden shrink-0 group relative">
+                <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Featured Visual Asset</label>
+                <div className="flex gap-6">
+                  <div className="w-32 h-32 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center overflow-hidden shrink-0 group relative shadow-inner">
                     {editingInsight?.featured_image_url ? (
                       <img src={editingInsight.featured_image_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <ImageIcon className="text-[#222]" size={32} />
+                      <ImageIcon className="text-[#222]" size={40} />
                     )}
                     {uploading && (
                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
@@ -287,19 +333,19 @@ const Insights: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 space-y-3">
+                  <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-2">
                       <input 
                         type="text" 
                         value={editingInsight?.featured_image_url || ''} 
                         onChange={e => setEditingInsight({...editingInsight!, featured_image_url: e.target.value})}
-                        className="flex-1 bg-[#111] border border-[#222] rounded-lg px-4 py-2 focus:ring-1 focus:ring-white outline-none text-xs"
-                        placeholder="Paste visual URL..."
+                        className="flex-1 bg-[#111] border border-[#222] rounded-xl px-4 py-3 focus:border-white outline-none text-xs font-mono"
+                        placeholder="Paste image URL or upload..."
                       />
                       <button 
                         type="button" 
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-2 hover:bg-[#eee] transition-all"
+                        className="px-6 py-3 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-2 hover:bg-[#eee] transition-all"
                       >
                         <Upload size={14} /> Upload
                       </button>
@@ -311,44 +357,99 @@ const Insights: React.FC = () => {
                         onChange={handleImageUpload}
                       />
                     </div>
-                    <p className="text-[10px] text-[#555] uppercase tracking-widest leading-relaxed">Recommended aspect ratio 16:9. Assets are hosted on stravigo-storage.</p>
+                    <p className="text-[10px] text-[#444] uppercase tracking-widest leading-relaxed">Recommended for maximum impact: 1920x1080px. Max 5MB.</p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Content Body (Markdown/HTML)</label>
+              <div className="space-y-4">
+                <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Content Body (Strategic Narrative)</label>
                 <textarea 
-                  rows={10}
+                  rows={15}
                   value={editingInsight?.content_body} 
                   onChange={e => setEditingInsight({...editingInsight!, content_body: e.target.value})}
-                  className="w-full bg-[#111] border border-[#222] rounded-lg px-6 py-4 focus:ring-1 focus:ring-white outline-none font-mono text-sm leading-relaxed"
-                  placeholder="Draft your brilliant ideas here..."
+                  className="w-full bg-[#111] border border-[#222] rounded-2xl px-8 py-8 focus:border-white outline-none font-mono text-sm leading-relaxed"
+                  placeholder="## Start your story here..."
                   required
                 />
               </div>
 
-              <div className="pt-8 border-t border-[#1a1a1a] flex items-center justify-between">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${editingInsight?.is_published ? 'bg-green-500' : 'bg-[#222]'}`}>
-                    <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${editingInsight?.is_published ? 'translate-x-5' : ''}`}></div>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    className="hidden" 
-                    checked={editingInsight?.is_published}
-                    onChange={e => setEditingInsight({...editingInsight!, is_published: e.target.checked})}
-                  />
-                  <span className="text-sm font-semibold uppercase tracking-widest text-[#888]">Publish Instantly</span>
-                </label>
-
-                <div className="flex gap-3">
-                  <button type="button" onClick={() => setIsEditorOpen(false)} className="px-8 py-3 rounded-full text-sm font-bold hover:bg-[#111] transition-all" disabled={saving || uploading}>Discard</button>
-                  <button type="submit" className="px-12 py-3 bg-white text-black rounded-full font-bold hover:bg-[#eee] transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] flex items-center gap-2" disabled={saving || uploading}>
-                    {saving && <Loader2 className="animate-spin w-4 h-4" />}
-                    {saving ? 'Saving...' : 'Save Article'}
-                  </button>
+              {/* SEO and Published Tracking Section */}
+              <div className="space-y-8 pt-10 border-t border-white/5">
+                <div className="flex items-center gap-3">
+                  <SearchIcon size={14} className="text-[#333]" />
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#333]">Search Engine Optimization (SEO) Intelligence</h4>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Meta Title</label>
+                      <input 
+                        type="text" 
+                        value={editingInsight?.seo_meta_title || ''} 
+                        onChange={e => setEditingInsight({...editingInsight!, seo_meta_title: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-xl px-4 py-3 focus:border-white outline-none text-sm font-semibold transition-all"
+                        placeholder="Auto-fills from title if empty"
+                      />
+                      <p className="text-[9px] text-[#333] uppercase font-bold tracking-tighter italic">Ideal length: 50-60 chars.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Meta Description</label>
+                      <textarea 
+                        rows={3}
+                        value={editingInsight?.seo_meta_description || ''} 
+                        onChange={e => setEditingInsight({...editingInsight!, seo_meta_description: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-xl px-4 py-3 focus:border-white outline-none text-sm leading-relaxed transition-all"
+                        placeholder="Auto-fills from content summary if empty"
+                      />
+                      <p className="text-[9px] text-[#333] uppercase font-bold tracking-tighter italic">Ideal length: 150-160 chars.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center gap-12 bg-[#050505] border border-[#1a1a1a] p-8 rounded-2xl shadow-inner">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${editingInsight?.is_published ? 'bg-green-500' : 'bg-[#222]'}`}>
+                      <div className={`absolute top-1.5 left-1.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${editingInsight?.is_published ? 'translate-x-6' : ''}`}></div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={editingInsight?.is_published}
+                      onChange={e => setEditingInsight({...editingInsight!, is_published: e.target.checked})}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest">Public Visibility</span>
+                      <span className="text-[8px] text-[#444] uppercase font-bold tracking-widest">Publish to live eagle feed</span>
+                    </div>
+                  </label>
+
+                  {/* Fix property access on potentially null or undefined editingInsight object through non-null assertion */}
+                  {editingInsight?.published_at && (
+                    <div className="flex items-center gap-3 border-l border-white/5 pl-12">
+                      <Clock size={16} className="text-[#333]" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#555]">Initial Launch</span>
+                        <span className="text-[10px] text-white font-mono">{new Date(editingInsight.published_at!).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-10 flex justify-end gap-6 border-t border-[#1a1a1a]">
+                <button type="button" onClick={() => setIsEditorOpen(false)} className="px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all text-[#444] hover:text-white" disabled={saving || uploading}>Discard Draft</button>
+                <button 
+                  type="submit" 
+                  className="px-14 py-4 bg-white text-black rounded-full font-black uppercase text-[10px] tracking-[0.2em] hover:bg-[#eee] transition-all shadow-[0_10px_40px_rgba(255,255,255,0.1)] flex items-center gap-2" 
+                  disabled={saving || uploading}
+                >
+                  {saving && <Loader2 className="animate-spin w-4 h-4" />}
+                  {saving ? 'Synchronizing...' : (editingInsight?.id ? 'Deploy Intelligence' : 'Publish Article')}
+                </button>
               </div>
             </form>
           </div>

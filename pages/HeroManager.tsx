@@ -8,12 +8,13 @@ import {
   Loader2, 
   Monitor, 
   Eye, 
-  ArrowRight,
   Sparkles,
   ChevronRight,
   ShieldCheck,
   LayoutTemplate,
-  RefreshCw
+  RefreshCw,
+  Globe,
+  Search
 } from 'lucide-react';
 
 const HeroManager: React.FC = () => {
@@ -29,33 +30,86 @@ const HeroManager: React.FC = () => {
 
   const fetchPages = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('pages')
-      .select('*')
-      .order('title', { ascending: true });
-    
-    if (data) {
-      setPages(data);
-      // Auto-select first page if none selected
-      if (data.length > 0 && !selectedPage) {
-        setSelectedPage(data[0]);
-      } else if (selectedPage) {
-        // Refresh the currently selected page data
-        const current = data.find(p => p.id === selectedPage.id);
-        if (current) setSelectedPage(current);
+    try {
+      const { data, error } = await supabase
+        .from('pages')
+        .select('*')
+        .order('title', { ascending: true });
+      
+      if (error) throw error;
+      
+      if (data) {
+        setPages(data);
+        // Auto-select first page if none selected or refresh selected
+        if (data.length > 0) {
+          if (!selectedPage) {
+            setSelectedPage(data[0]);
+          } else {
+            const refreshed = data.find(p => p.id === selectedPage.id);
+            if (refreshed) setSelectedPage(refreshed);
+          }
+        }
       }
+    } catch (err: any) {
+      console.error("Fetch Pages Error:", err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleInitialize = async () => {
     setInitializing(true);
     const defaultPages = [
-      { slug: 'home', title: 'Home Page', hero_title: 'We Build the Brands Everyone Talks About', hero_description: 'Stravigo blends strategy, culture, and creativity to help businesses dominate attention.', hero_cta_text: 'Talk To Stravigo', hero_cta_link: '/contact' },
-      { slug: 'about', title: 'About Stravigo', hero_title: 'Trusted by Market Leaders', hero_description: 'We help brands, individuals, and entertainers become impossible to ignore.', hero_cta_text: 'Our Story', hero_cta_link: '/about' },
-      { slug: 'our-work', title: 'Our Work', hero_title: 'Your Brand. Our Strategy. Endless Possibilities.', hero_description: 'Deep dive into some of the campaigns that have defined us.', hero_cta_text: 'See Hits', hero_cta_link: '/case-studies' },
-      { slug: 'insights', title: 'The Stravigo Eagle', hero_title: 'In-depth Insights & Analysis', hero_description: 'Ideas and challenges shaping today’s world.', hero_cta_text: 'Read Reports', hero_cta_link: '/insights' },
-      { slug: 'careers', title: 'Culture & Careers', hero_title: 'Powered By Doers & Dreamers', hero_description: 'If you want to grow fast and think boldly — welcome home.', hero_cta_text: 'Join Us', hero_cta_link: '/careers' }
+      { 
+        slug: 'home', 
+        title: 'Stravigo', 
+        hero_title: 'We Build the Brands Everyone Talks About !', 
+        hero_description: 'Stravigo blends strategy, culture, and creativity to help businesses dominate attention.', 
+        hero_cta_text: 'Talk To Stravigo', 
+        hero_cta_link: '/contact',
+        meta_title: 'Stravigo - We Build the Brands Everyone Talks About',
+        meta_description: 'Stravigo blends strategy, culture, and creativity to help businesses dominate attention.'
+      },
+      { 
+        slug: 'about', 
+        title: 'About Stravigo', 
+        hero_title: 'Trusted by Market Leaders', 
+        hero_description: 'We help brands, individuals, and entertainers become impossible to ignore.', 
+        hero_cta_text: 'Our Story', 
+        hero_cta_link: '/about',
+        meta_title: 'About Stravigo',
+        meta_description: 'We help brands, individuals, and entertainers become impossible to ignore.'
+      },
+      { 
+        slug: 'our-work', 
+        title: 'Our Work', 
+        hero_title: 'Your Brand. Our Strategy. Endless Possibilities.', 
+        hero_description: 'Deep dive into some of the campaigns that have defined us.', 
+        hero_cta_text: 'See Hits', 
+        hero_cta_link: '/case-studies',
+        meta_title: 'Our Work',
+        meta_description: 'Deep dive into some of the campaigns that have defined us.'
+      },
+      { 
+        slug: 'insights', 
+        title: 'The Stravigo Eagle', 
+        hero_title: 'In-depth Insights & Analysis', 
+        hero_description: 'Ideas and challenges shaping today’s world.', 
+        hero_cta_text: 'Read Reports', 
+        hero_cta_link: '/insights',
+        meta_title: 'The Stravigo Eagle',
+        meta_description: 'Ideas and challenges shaping today’s world.'
+      },
+      { 
+        slug: 'careers', 
+        title: 'Culture & Careers', 
+        hero_title: 'Powered By Doers & Dreamers', 
+        hero_description: 'If you want to grow fast and think boldly — welcome home.', 
+        hero_cta_text: 'Join Us', 
+        hero_cta_link: '/careers',
+        meta_title: 'Culture & Careers',
+        meta_description: 'If you want to grow fast and think boldly — welcome home.'
+      }
     ];
 
     const { error } = await supabase.from('pages').insert(defaultPages);
@@ -76,22 +130,23 @@ const HeroManager: React.FC = () => {
     const { error } = await supabase
       .from('pages')
       .update({
+        title: selectedPage.title,
         hero_title: selectedPage.hero_title,
         hero_description: selectedPage.hero_description,
         hero_cta_text: selectedPage.hero_cta_text,
         hero_cta_link: selectedPage.hero_cta_link,
+        meta_title: selectedPage.meta_title || selectedPage.title,
+        meta_description: selectedPage.meta_description || selectedPage.hero_description,
         updated_at: new Date().toISOString()
       })
       .eq('id', selectedPage.id);
 
     setSaving(false);
     if (!error) {
-      // Small visual feedback is better than a jarring alert
-      // but keeping alert for now as per previous patterns
-      alert(`${selectedPage.title} Hero Section Updated.`);
+      alert(`${selectedPage.title} Deployment Successful.`);
       fetchPages();
     } else {
-      alert('Error updating page: ' + error.message);
+      alert('Deployment error: ' + error.message);
     }
   };
 
@@ -99,14 +154,14 @@ const HeroManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold font-display tracking-tight italic">Global Hero Editor</h2>
-          <p className="text-[#888] mt-1">Manage the first impression of every page on the Stravigo website.</p>
+          <h2 className="text-3xl font-bold font-display tracking-tight italic">Global Hero & SEO Editor</h2>
+          <p className="text-[#888] mt-1">Refine the digital presence and search credibility of every channel.</p>
         </div>
         <div className="flex gap-3">
            <button 
             onClick={fetchPages}
             className="p-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-full text-[#444] hover:text-white transition-all"
-            title="Reload Data"
+            title="Force Sync Data"
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -116,7 +171,7 @@ const HeroManager: React.FC = () => {
             className="flex items-center gap-2 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-[#eee] transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            {saving ? 'Syncing...' : 'Save Changes'}
+            {saving ? 'Synchronizing...' : 'Save & Publish'}
           </button>
         </div>
       </div>
@@ -126,20 +181,20 @@ const HeroManager: React.FC = () => {
         <div className="lg:col-span-1 space-y-4">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-[#333] block">Select Channel</label>
           
-          <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl overflow-hidden p-2 space-y-1 shadow-inner">
+          <div className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl overflow-hidden p-2 space-y-1 shadow-inner min-h-[100px]">
             {loading && pages.length === 0 ? (
               [1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-[#111] animate-pulse rounded-lg mb-1" />)
             ) : pages.length === 0 ? (
               <div className="p-8 text-center space-y-4">
                 <LayoutTemplate size={32} className="mx-auto text-[#1a1a1a]" />
-                <p className="text-[10px] uppercase font-black tracking-widest text-[#444]">No Pages Detected</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-[#444]">Repository Empty</p>
                 <button 
                   onClick={handleInitialize}
                   disabled={initializing}
                   className="w-full py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#eee] transition-all flex items-center justify-center gap-2"
                 >
                   {initializing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Initialize Core
+                  Auto-Initialize
                 </button>
               </div>
             ) : (
@@ -158,9 +213,6 @@ const HeroManager: React.FC = () => {
                     <span className="font-bold text-sm tracking-tight">{page.title}</span>
                   </div>
                   <ChevronRight size={14} className={`z-10 ${selectedPage?.id === page.id ? 'text-black' : 'text-[#222] group-hover:text-[#555]'}`} />
-                  {selectedPage?.id === page.id && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/10 opacity-50" />
-                  )}
                 </button>
               ))
             )}
@@ -168,9 +220,9 @@ const HeroManager: React.FC = () => {
           
           <div className="p-6 bg-[#0a0a0a] border border-[#1a1a1a] rounded-2xl">
             <Sparkles size={20} className="text-[#333] mb-4" />
-            <h4 className="text-xs font-bold uppercase tracking-widest text-[#555] mb-2">Editor Intelligence</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[#555] mb-2">Editor Pro-Tip</h4>
             <p className="text-[10px] leading-relaxed text-[#444]">
-              The Hero section defines the brand's gravitas. Ensure headlines are punchy, strategy-driven, and results-obsessed. 
+              Relevance is currency. Your Meta Titles should be a perfect balance of keywords and punchy branding.
             </p>
           </div>
         </div>
@@ -180,21 +232,23 @@ const HeroManager: React.FC = () => {
           {!selectedPage ? (
             <div className="h-[500px] flex flex-col items-center justify-center text-[#222] border border-dashed border-[#1a1a1a] rounded-3xl bg-[#0a0a0a]/30">
               <Monitor size={64} strokeWidth={1} />
-              <p className="mt-4 font-black uppercase tracking-widest text-xs">Select a channel to refine presence</p>
+              <p className="mt-4 font-black uppercase tracking-widest text-xs">Awaiting Channel Selection</p>
             </div>
           ) : (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-[#0a0a0a] border border-[#1a1a1a] p-10 rounded-3xl space-y-10 shadow-2xl">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+              <div className="bg-[#0a0a0a] border border-[#1a1a1a] p-10 rounded-3xl space-y-12 shadow-2xl">
+                
+                {/* Header Information */}
                 <div className="flex items-center justify-between border-b border-[#1a1a1a] pb-8">
                    <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 border border-white/10">
                       <Type size={24} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-2xl font-display uppercase tracking-tight italic text-white">{selectedPage.title}</h3>
+                      <h3 className="font-bold text-2xl font-display uppercase tracking-tight italic text-white">Refining: {selectedPage.title}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        <p className="text-[10px] text-[#555] uppercase font-black tracking-widest">Channel: stravigo.com/{selectedPage.slug === 'home' ? '' : selectedPage.slug}</p>
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        <p className="text-[10px] text-[#555] uppercase font-black tracking-widest">Active Route: /{selectedPage.slug === 'home' ? '' : selectedPage.slug}</p>
                       </div>
                     </div>
                   </div>
@@ -205,58 +259,106 @@ const HeroManager: React.FC = () => {
                     className="p-4 bg-[#111] border border-[#222] hover:bg-white hover:text-black rounded-2xl transition-all text-[#555] flex items-center gap-2 group"
                   >
                     <Eye size={18} />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Preview Live</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">View Live</span>
                   </a>
                 </div>
 
                 <form className="space-y-12">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[#444]">The Big Bold Statement (Hero Title)</label>
-                      <span className="text-[9px] text-[#222] uppercase font-black tracking-widest">Headline Level 1</span>
+                  {/* Internal Branding Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck size={14} className="text-[#333]" />
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#333]">Internal Metadata</h4>
                     </div>
-                    <textarea 
-                      rows={2}
-                      value={selectedPage.hero_title || ''}
-                      onChange={e => setSelectedPage({...selectedPage, hero_title: e.target.value})}
-                      className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-8 py-8 focus:border-white focus:ring-1 focus:ring-white/20 outline-none text-4xl md:text-5xl font-bold font-display tracking-tight leading-tight transition-all placeholder:text-[#111]"
-                      placeholder="e.g., We Build the Brands Everyone Talks About"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[#444]">Strategic Narrative (Hero Description)</label>
-                      <span className="text-[9px] text-[#222] uppercase font-black tracking-widest">Secondary Narrative</span>
-                    </div>
-                    <textarea 
-                      rows={5}
-                      value={selectedPage.hero_description || ''}
-                      onChange={e => setSelectedPage({...selectedPage, hero_description: e.target.value})}
-                      className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-8 py-8 focus:border-white focus:ring-1 focus:ring-white/20 outline-none text-lg text-[#888] leading-relaxed transition-all placeholder:text-[#111]"
-                      placeholder="Explain the strategy behind the narrative..."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[#444]">Primary Action (CTA Text)</label>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">Page Display Title</label>
                       <input 
                         type="text"
-                        value={selectedPage.hero_cta_text || ''}
-                        onChange={e => setSelectedPage({...selectedPage, hero_cta_text: e.target.value})}
-                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-8 py-5 focus:border-white outline-none text-xs font-black uppercase tracking-widest transition-all"
-                        placeholder="e.g., Talk To Stravigo"
+                        value={selectedPage.title || ''}
+                        onChange={e => setSelectedPage({...selectedPage, title: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-6 py-4 focus:border-white outline-none text-sm font-bold transition-all"
+                        placeholder="e.g., Stravigo"
                       />
                     </div>
+                  </div>
+
+                  {/* Primary Hero Section */}
+                  <div className="space-y-8 pt-6 border-t border-white/5">
+                    <div className="flex items-center gap-3">
+                      <Sparkles size={14} className="text-[#333]" />
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#333]">Hero Presence (Above the Fold)</h4>
+                    </div>
+                    
                     <div className="space-y-4">
-                      <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[#444]">Destination Path (Link)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">Big Bold Statement (H1)</label>
+                      <textarea 
+                        rows={2}
+                        value={selectedPage.hero_title || ''}
+                        onChange={e => setSelectedPage({...selectedPage, hero_title: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-8 py-8 focus:border-white focus:ring-1 focus:ring-white/20 outline-none text-4xl md:text-5xl font-bold font-display tracking-tight leading-tight transition-all"
+                        placeholder="Enter primary headline..."
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">Strategic Narrative (Subtext)</label>
+                      <textarea 
+                        rows={4}
+                        value={selectedPage.hero_description || ''}
+                        onChange={e => setSelectedPage({...selectedPage, hero_description: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-8 py-6 focus:border-white outline-none text-lg text-[#888] leading-relaxed transition-all"
+                        placeholder="Detail the brand story..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">CTA Label</label>
+                        <input 
+                          type="text"
+                          value={selectedPage.hero_cta_text || ''}
+                          onChange={e => setSelectedPage({...selectedPage, hero_cta_text: e.target.value})}
+                          className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-6 py-4 focus:border-white outline-none text-xs font-black uppercase tracking-widest transition-all"
+                        />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">CTA Redirect</label>
+                        <input 
+                          type="text"
+                          value={selectedPage.hero_cta_link || ''}
+                          onChange={e => setSelectedPage({...selectedPage, hero_cta_link: e.target.value})}
+                          className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-6 py-4 focus:border-white outline-none text-xs font-mono text-[#555] transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SEO Meta Tags Section */}
+                  <div className="space-y-8 pt-6 border-t border-white/5">
+                    <div className="flex items-center gap-3 text-white/40">
+                      <Search size={14} />
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Search Engine Optimization (Meta)</h4>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">Meta Title Tag</label>
                       <input 
                         type="text"
-                        value={selectedPage.hero_cta_link || ''}
-                        onChange={e => setSelectedPage({...selectedPage, hero_cta_link: e.target.value})}
-                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-8 py-5 focus:border-white outline-none text-xs font-mono text-[#555] transition-all"
-                        placeholder="e.g., #contact-us"
+                        value={selectedPage.meta_title || ''}
+                        onChange={e => setSelectedPage({...selectedPage, meta_title: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-6 py-4 focus:border-white outline-none text-sm font-semibold transition-all border-l-4 border-l-blue-900/30"
+                        placeholder="Recommended: 50-60 characters"
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#444]">Meta Description Tag</label>
+                      <textarea 
+                        rows={3}
+                        value={selectedPage.meta_description || ''}
+                        onChange={e => setSelectedPage({...selectedPage, meta_description: e.target.value})}
+                        className="w-full bg-[#050505] border border-[#1a1a1a] rounded-2xl px-6 py-4 focus:border-white outline-none text-sm leading-relaxed transition-all border-l-4 border-l-blue-900/30"
+                        placeholder="Recommended: 150-160 characters"
                       />
                     </div>
                   </div>
@@ -264,11 +366,11 @@ const HeroManager: React.FC = () => {
 
                 <div className="pt-10 border-t border-[#1a1a1a] flex flex-col md:flex-row justify-between items-center gap-4">
                    <div className="flex items-center gap-2 text-[9px] uppercase font-black tracking-[0.2em] text-[#222]">
-                    <ShieldCheck size={14} />
-                    Verified deployment. Changes impact live production environment.
+                    <Globe size={14} />
+                    Impact: Global. Changes affect SEO ranking and primary web visuals.
                    </div>
                    <div className="text-[9px] text-[#333] uppercase font-black tracking-widest">
-                    Last Synced: {selectedPage.updated_at ? new Date(selectedPage.updated_at).toLocaleString() : 'Never'}
+                    Presence Verified: {selectedPage.updated_at ? new Date(selectedPage.updated_at).toLocaleString() : 'First Deployment'}
                    </div>
                 </div>
               </div>
