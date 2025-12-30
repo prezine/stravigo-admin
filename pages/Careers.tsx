@@ -26,7 +26,8 @@ import {
   Phone,
   Linkedin,
   Globe,
-  ArrowUpRight
+  ArrowUpRight,
+  AlignLeft
 } from 'lucide-react';
 
 const Careers: React.FC = () => {
@@ -84,6 +85,7 @@ const Careers: React.FC = () => {
       work_type: 'Hybrid',
       location: 'Lagos, Nigeria',
       description: '',
+      excerpt: '',
       is_active: true
     });
     setIsEditorOpen(true);
@@ -218,15 +220,20 @@ const Careers: React.FC = () => {
               </div>
             ) : jobs.map(job => (
               <div key={job.id} className={`bg-[#0a0a0a] border transition-all p-8 rounded-3xl flex items-center justify-between gap-6 group ${job.is_active ? 'border-[#1a1a1a] hover:border-white/10' : 'border-red-900/10 opacity-60 shadow-inner'}`}>
-                <div className="flex gap-8 items-center">
+                <div className="flex gap-8 items-center flex-1">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 border border-white/5 ${job.is_active ? 'bg-white/5 text-white group-hover:bg-white group-hover:text-black' : 'bg-[#111] text-[#333]'}`}>
                     <Briefcase size={28} />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-3">
                       <h3 className="text-2xl font-bold font-display italic tracking-tight">{job.role_title}</h3>
                       <span className="text-[9px] px-3 py-1 rounded bg-white/5 text-[#555] uppercase font-black tracking-[0.2em] border border-white/5">{job.team}</span>
                     </div>
+                    {job.excerpt && (
+                      <p className="text-sm text-[#888] line-clamp-1 max-w-2xl font-medium mb-2 italic">
+                        {job.excerpt}
+                      </p>
+                    )}
                     <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-[#444]">
                       <div className="flex items-center gap-2"><MapPin size={14} className="text-[#222]" /> {job.location}</div>
                       <div className="flex items-center gap-2"><Building size={14} className="text-[#222]" /> {job.business_division}</div>
@@ -409,6 +416,19 @@ const Careers: React.FC = () => {
                     className="w-full bg-[#111] border border-[#1a1a1a] rounded-2xl px-6 py-4 focus:border-white outline-none text-sm font-bold"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] uppercase tracking-widest text-[#444] font-black flex items-center gap-2">
+                  <AlignLeft size={14} /> Short Preview (excerpt)
+                </label>
+                <textarea 
+                  rows={2}
+                  value={editingJob?.excerpt} 
+                  onChange={e => setEditingJob({...editingJob!, excerpt: e.target.value})}
+                  className="w-full bg-[#111] border border-[#1a1a1a] rounded-2xl px-8 py-6 focus:border-white outline-none text-sm leading-relaxed italic"
+                  placeholder="Summarize the core impact of this role in 1-2 sentences..."
+                />
               </div>
 
               <div className="space-y-4">

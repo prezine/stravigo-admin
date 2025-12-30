@@ -89,6 +89,7 @@ export interface JobOpening {
   work_type: string;
   location: string;
   description: string;
+  excerpt: string;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
