@@ -44,6 +44,7 @@ export interface Insight {
   excerpt?: string;
   content_body: string;
   featured_image_url?: string;
+  video_url?: string;
   author_name: string;
   content_format: 'article' | 'video';
   is_published: boolean;

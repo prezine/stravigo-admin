@@ -19,7 +19,9 @@ import {
   Globe,
   Clock,
   Star,
-  Zap
+  Zap,
+  Youtube,
+  AlertTriangle
 } from 'lucide-react';
 
 const Insights: React.FC = () => {
@@ -60,6 +62,7 @@ const Insights: React.FC = () => {
       category: 'Strategic Thinking',
       author_name: 'Stravigo Editorial',
       content_format: 'article',
+      video_url: '',
       is_published: false,
       is_featured: false,
       content_body: '',
@@ -107,9 +110,8 @@ const Insights: React.FC = () => {
     if (!editingInsight) return;
     setSaving(true);
 
-    // Ensure only one insight is featured
+    // Singleton Featured Logic: Ensure only one insight is featured
     if (editingInsight.is_featured) {
-      // Unfeature all other insights first
       await supabase
         .from('insights')
         .update({ is_featured: false })
@@ -166,9 +168,9 @@ const Insights: React.FC = () => {
     if (current) return; // Already featured
 
     setLoading(true);
-    // 1. Unfeature all
+    // 1. Unfeature all current featured items
     await supabase.from('insights').update({ is_featured: false }).eq('is_featured', true);
-    // 2. Feature selected
+    // 2. Feature the selected item
     await supabase.from('insights').update({ is_featured: true }).eq('id', id);
     
     await fetchInsights();
@@ -224,6 +226,12 @@ const Insights: React.FC = () => {
               {!insight.is_published && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
                   <span className="px-4 py-1.5 bg-yellow-500/90 text-black text-[9px] font-black uppercase tracking-widest rounded-lg">Draft Phase</span>
+                </div>
+              )}
+
+              {insight.content_format === 'video' && (
+                <div className="absolute bottom-4 right-4 p-2 bg-red-600 rounded-full shadow-lg">
+                  <Youtube size={16} className="text-white" />
                 </div>
               )}
             </div>
@@ -354,8 +362,27 @@ const Insights: React.FC = () => {
                 </div>
               </div>
 
+              {/* Video URL Field - Only shown when format is video */}
+              {editingInsight?.content_format === 'video' && (
+                <div className="space-y-4 p-8 bg-[#111] border border-red-500/10 rounded-3xl animate-in slide-in-from-top-4 duration-300">
+                  <div className="flex items-center gap-3">
+                    <Youtube size={20} className="text-red-600" />
+                    <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">YouTube Video URL</label>
+                  </div>
+                  <input 
+                    type="url" 
+                    value={editingInsight?.video_url || ''} 
+                    onChange={e => setEditingInsight({...editingInsight!, video_url: e.target.value})}
+                    className="w-full bg-[#0a0a0a] border border-[#222] rounded-xl px-6 py-4 focus:border-red-600 outline-none font-mono text-sm"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    required={editingInsight?.content_format === 'video'}
+                  />
+                  <p className="text-[10px] text-[#444] uppercase tracking-widest italic">Paste the full YouTube link. This will be the primary content source.</p>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Featured Visual Asset</label>
+                <label className="text-[10px] uppercase tracking-widest text-[#444] font-black">Featured Visual Asset {editingInsight?.content_format === 'video' ? '(Video Cover)' : ''}</label>
                 <div className="flex gap-6">
                   <div className="w-32 h-32 rounded-2xl bg-[#111] border border-[#222] flex items-center justify-center overflow-hidden shrink-0 group relative shadow-inner">
                     {editingInsight?.featured_image_url ? (
@@ -393,7 +420,11 @@ const Insights: React.FC = () => {
                         onChange={handleImageUpload}
                       />
                     </div>
-                    <p className="text-[10px] text-[#444] uppercase tracking-widest leading-relaxed">Recommended for maximum impact: 1920x1080px. Max 5MB.</p>
+                    <p className="text-[10px] text-[#444] uppercase tracking-widest leading-relaxed">
+                      {editingInsight?.content_format === 'video' 
+                        ? 'Mandatory cover image for the video player and feed thumbnail.' 
+                        : 'Recommended for maximum impact: 1920x1080px. Max 5MB.'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -463,21 +494,28 @@ const Insights: React.FC = () => {
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-3 cursor-pointer group border-l border-white/5 pl-12">
-                    <div className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${editingInsight?.is_featured ? 'bg-white' : 'bg-[#222]'}`}>
-                      <div className={`absolute top-1.5 left-1.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${editingInsight?.is_featured ? 'translate-x-6 bg-black' : ''}`}></div>
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      className="hidden" 
-                      checked={editingInsight?.is_featured}
-                      onChange={e => setEditingInsight({...editingInsight!, is_featured: e.target.checked})}
-                    />
-                    <div className="flex flex-col text-white/40">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Featured Caveat</span>
-                      <span className="text-[8px] uppercase font-bold tracking-widest">Primary post highlight (Only one)</span>
-                    </div>
-                  </label>
+                  <div className="flex flex-col gap-2 border-l border-white/5 pl-12">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${editingInsight?.is_featured ? 'bg-white' : 'bg-[#222]'}`}>
+                        <div className={`absolute top-1.5 left-1.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${editingInsight?.is_featured ? 'translate-x-6 bg-black' : ''}`}></div>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        className="hidden" 
+                        checked={editingInsight?.is_featured}
+                        onChange={e => setEditingInsight({...editingInsight!, is_featured: e.target.checked})}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Featured Insight</span>
+                        <span className="text-[8px] uppercase font-bold tracking-widest text-[#444]">Only one post can be featured at a time</span>
+                      </div>
+                    </label>
+                    {editingInsight?.is_featured && (
+                      <div className="flex items-center gap-2 text-[8px] text-yellow-500/80 uppercase font-black tracking-widest">
+                        <AlertTriangle size={10} /> Will replace current featured post
+                      </div>
+                    )}
+                  </div>
 
                   {editingInsight?.published_at && (
                     <div className="flex items-center gap-3 border-l border-white/5 pl-12">
