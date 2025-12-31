@@ -15,7 +15,8 @@ import {
   Activity,
   CheckCircle2,
   Tag,
-  X
+  X,
+  Quote
 } from 'lucide-react';
 
 const CaseStudies: React.FC = () => {
@@ -71,6 +72,8 @@ const CaseStudies: React.FC = () => {
       slug: '',
       status: 'complete',
       headline_summary: '',
+      snippet: '',
+      sub_snippet: '',
       service_type: 'business',
       is_published: false,
       is_featured: false,
@@ -409,6 +412,44 @@ const CaseStudies: React.FC = () => {
               </div>
 
               <div className="space-y-4">
+                <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Headline Summary (The Hook)</label>
+                <textarea 
+                  rows={2}
+                  value={editingCase?.headline_summary} 
+                  onChange={e => setEditingCase({...editingCase!, headline_summary: e.target.value})}
+                  className="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 focus:ring-1 focus:ring-white outline-none text-sm italic"
+                  placeholder="How Stravigo Turned Nutrify Into a Trusted Part of Everyday Wellness"
+                />
+              </div>
+
+              {/* Standout Quote Section */}
+              <div className="space-y-4">
+                <label className="text-[10px] uppercase tracking-widest text-[#555] font-black flex items-center gap-2">
+                  <Quote size={14} className="text-[#333]" /> Standout Campaign Quote
+                </label>
+                <div className="bg-[#0d0d0d] border border-white/5 p-6 rounded-2xl space-y-4 relative overflow-hidden group">
+                  <Quote size={64} className="absolute -right-4 -top-4 text-white/[0.02] rotate-12 group-hover:text-white/[0.04] transition-all" />
+                  <div className="space-y-2 relative z-10">
+                    <textarea 
+                      rows={2}
+                      value={editingCase?.snippet || ''} 
+                      onChange={e => setEditingCase({...editingCase!, snippet: e.target.value})}
+                      className="w-full bg-transparent border-none focus:ring-0 p-0 text-lg font-display italic text-white placeholder-white/10"
+                      placeholder="Enter the standout project quote..."
+                    />
+                    <div className="h-px bg-gradient-to-r from-white/10 to-transparent" />
+                    <input 
+                      type="text"
+                      value={editingCase?.sub_snippet || ''}
+                      onChange={e => setEditingCase({...editingCase!, sub_snippet: e.target.value})}
+                      className="w-full bg-transparent border-none focus:ring-0 p-0 text-[10px] font-black uppercase tracking-[0.3em] text-[#555] placeholder-[#222]"
+                      placeholder="Attribution or context (e.g., FOUNDER, NUTRIFY)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Campaign Tags (Identities & Options)</label>
                 <div className="bg-[#111] border border-[#222] rounded-xl p-4 space-y-4">
                   <div className="flex flex-wrap gap-2">
@@ -445,17 +486,6 @@ const CaseStudies: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-[#555] font-black">Headline Summary (The Hook)</label>
-                <textarea 
-                  rows={2}
-                  value={editingCase?.headline_summary} 
-                  onChange={e => setEditingCase({...editingCase!, headline_summary: e.target.value})}
-                  className="w-full bg-[#111] border border-[#222] rounded-lg px-4 py-3 focus:ring-1 focus:ring-white outline-none text-sm italic"
-                  placeholder="How Stravigo Turned Nutrify Into a Trusted Part of Everyday Wellness"
-                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

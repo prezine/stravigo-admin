@@ -20,6 +20,8 @@ export interface CaseStudy {
   slug: string;
   status: 'in progress' | 'complete' | string;
   headline_summary: string;
+  snippet?: string;
+  sub_snippet?: string;
   excerpt?: string;
   full_description?: string;
   background?: string;
