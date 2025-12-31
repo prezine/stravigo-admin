@@ -47,6 +47,7 @@ export interface Insight {
   author_name: string;
   content_format: 'article' | 'video';
   is_published: boolean;
+  is_featured: boolean;
   created_at: string;
   updated_at?: string;
   seo_meta_title?: string;

@@ -17,7 +17,9 @@ import {
   Upload,
   Search as SearchIcon,
   Globe,
-  Clock
+  Clock,
+  Star,
+  Zap
 } from 'lucide-react';
 
 const Insights: React.FC = () => {
@@ -59,6 +61,7 @@ const Insights: React.FC = () => {
       author_name: 'Stravigo Editorial',
       content_format: 'article',
       is_published: false,
+      is_featured: false,
       content_body: '',
       seo_meta_title: '',
       seo_meta_description: ''
@@ -104,6 +107,15 @@ const Insights: React.FC = () => {
     if (!editingInsight) return;
     setSaving(true);
 
+    // Ensure only one insight is featured
+    if (editingInsight.is_featured) {
+      // Unfeature all other insights first
+      await supabase
+        .from('insights')
+        .update({ is_featured: false })
+        .eq('is_featured', true);
+    }
+
     // Auto-fill SEO metadata if missing
     const seoTitle = editingInsight.seo_meta_title?.trim() || editingInsight.title?.trim() || '';
     const plainBody = stripMarkdown(editingInsight.content_body || '');
@@ -116,7 +128,7 @@ const Insights: React.FC = () => {
     if (editingInsight.is_published && !publishedAt) {
       publishedAt = new Date().toISOString();
     } else if (!editingInsight.is_published) {
-      publishedAt = undefined; // Or keep as is depending on policy, usually clear if unpublishing
+      publishedAt = undefined;
     }
 
     const payload = {
@@ -150,6 +162,18 @@ const Insights: React.FC = () => {
     }
   };
 
+  const toggleFeatured = async (id: string, current: boolean) => {
+    if (current) return; // Already featured
+
+    setLoading(true);
+    // 1. Unfeature all
+    await supabase.from('insights').update({ is_featured: false }).eq('is_featured', true);
+    // 2. Feature selected
+    await supabase.from('insights').update({ is_featured: true }).eq('id', id);
+    
+    await fetchInsights();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -175,7 +199,8 @@ const Insights: React.FC = () => {
         ) : insights.length === 0 ? (
           <div className="col-span-full py-20 text-center text-[#555] bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl">No insights published.</div>
         ) : insights.map((insight) => (
-          <div key={insight.id} className="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl overflow-hidden group hover:border-white/20 transition-all flex flex-col shadow-lg">
+          <div key={insight.id} className={`bg-[#0a0a0a] border ${insight.is_featured ? 'border-white/40 ring-1 ring-white/10' : 'border-[#1a1a1a]'} rounded-xl overflow-hidden group hover:border-white/20 transition-all flex flex-col shadow-lg relative`}>
+            
             <div className="h-48 bg-[#111] relative overflow-hidden">
               {insight.featured_image_url ? (
                 <img src={insight.featured_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -184,11 +209,18 @@ const Insights: React.FC = () => {
                   {insight.content_format === 'video' ? <Video size={48} /> : <FileText size={48} />}
                 </div>
               )}
-              <div className="absolute top-4 left-4">
+              
+              <div className="absolute top-4 left-4 flex gap-2">
                 <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-[9px] uppercase tracking-widest font-black rounded-full border border-white/10">
                   {insight.category}
                 </span>
+                {insight.is_featured && (
+                  <span className="px-3 py-1 bg-white text-black text-[9px] uppercase tracking-widest font-black rounded-full flex items-center gap-1 shadow-xl">
+                    <Star size={10} fill="currentColor" /> Featured
+                  </span>
+                )}
               </div>
+
               {!insight.is_published && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
                   <span className="px-4 py-1.5 bg-yellow-500/90 text-black text-[9px] font-black uppercase tracking-widest rounded-lg">Draft Phase</span>
@@ -222,11 +254,15 @@ const Insights: React.FC = () => {
                 <span className="text-[10px] font-bold text-[#555] tracking-tight">{insight.author_name}</span>
               </div>
               <div className="flex gap-1">
+                <button 
+                  onClick={() => toggleFeatured(insight.id, insight.is_featured)}
+                  className={`p-2 rounded-lg transition-colors ${insight.is_featured ? 'text-white' : 'text-[#222] hover:text-white'}`}
+                  title={insight.is_featured ? "Primary Feature" : "Make Featured"}
+                >
+                  <Star size={14} fill={insight.is_featured ? "currentColor" : "none"} />
+                </button>
                 <button onClick={() => handleEdit(insight)} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-[#555] hover:text-white">
                   <Edit2 size={14} />
-                </button>
-                <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-[#555] hover:text-white">
-                  <Eye size={14} />
                 </button>
                 <button 
                   onClick={() => handleDelete(insight.id)}
@@ -374,11 +410,11 @@ const Insights: React.FC = () => {
                 />
               </div>
 
-              {/* SEO and Published Tracking Section */}
+              {/* SEO and Featured Status Tracking Section */}
               <div className="space-y-8 pt-10 border-t border-white/5">
                 <div className="flex items-center gap-3">
                   <SearchIcon size={14} className="text-[#333]" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#333]">Search Engine Optimization (SEO) Intelligence</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#333]">Editorial Configuration & SEO Intelligence</h4>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -423,11 +459,26 @@ const Insights: React.FC = () => {
                     />
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black uppercase tracking-widest">Public Visibility</span>
-                      <span className="text-[8px] text-[#444] uppercase font-bold tracking-widest">Publish to live eagle feed</span>
+                      <span className="text-[8px] text-[#444] uppercase font-bold tracking-widest">Publish to live feed</span>
                     </div>
                   </label>
 
-                  {/* Fix property access on potentially null or undefined editingInsight object through non-null assertion */}
+                  <label className="flex items-center gap-3 cursor-pointer group border-l border-white/5 pl-12">
+                    <div className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${editingInsight?.is_featured ? 'bg-white' : 'bg-[#222]'}`}>
+                      <div className={`absolute top-1.5 left-1.5 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${editingInsight?.is_featured ? 'translate-x-6 bg-black' : ''}`}></div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={editingInsight?.is_featured}
+                      onChange={e => setEditingInsight({...editingInsight!, is_featured: e.target.checked})}
+                    />
+                    <div className="flex flex-col text-white/40">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Featured Caveat</span>
+                      <span className="text-[8px] uppercase font-bold tracking-widest">Primary post highlight (Only one)</span>
+                    </div>
+                  </label>
+
                   {editingInsight?.published_at && (
                     <div className="flex items-center gap-3 border-l border-white/5 pl-12">
                       <Clock size={16} className="text-[#333]" />
@@ -447,7 +498,7 @@ const Insights: React.FC = () => {
                   className="px-14 py-4 bg-white text-black rounded-full font-black uppercase text-[10px] tracking-[0.2em] hover:bg-[#eee] transition-all shadow-[0_10px_40px_rgba(255,255,255,0.1)] flex items-center gap-2" 
                   disabled={saving || uploading}
                 >
-                  {saving && <Loader2 className="animate-spin w-4 h-4" />}
+                  {saving ? <Loader2 className="animate-spin w-4 h-4 text-black" /> : <Zap size={16} />}
                   {saving ? 'Synchronizing...' : (editingInsight?.id ? 'Deploy Intelligence' : 'Publish Article')}
                 </button>
               </div>
